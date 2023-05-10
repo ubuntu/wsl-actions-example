@@ -1,0 +1,79 @@
+# Run the tests on an Unbuntu distro running on WSL
+name: Test on Azure
+
+# Prevent multiple runs to interfere with each other
+concurrency: azure-vm
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+env:
+  az_name: wsl-ci-2
+  az_resource_group: wsl
+  distro: Ubuntu-Preview
+
+jobs:
+  vm-setup:
+    name: Set up Azure VM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_VM_CREDS }}
+      - name: Start the Runner
+        shell: bash
+        run: |
+          az vm start --name ${{ env.az_name }} --resource-group ${{ env.az_resource_group }}
+
+  tests:
+    name: Run QA checks on the Azure VM
+    runs-on: self-hosted
+    needs: vm-setup
+    steps:
+      - name: Set up WSL
+        uses: Ubuntu/WSL/.github/actions/wsl-install@main
+        with:
+            distro: ${{ env.distro }}
+      - name: Checkout your repo into WSL
+        uses: Ubuntu/WSL/.github/actions/wsl-checkout@main
+        with:
+            distro: ${{ env.distro }}
+            working-dir: "~/myrepo"
+      - name: Install python
+        uses: Ubuntu/WSL/.github/actions/wsl-bash@main
+        with:
+          distro: ${{ env.distro }}
+          exec: |
+            set -eu
+            DEBIAN_FRONTEND=noninteractive apt update
+            DEBIAN_FRONTEND=noninteractive apt install -y python3
+      - name: Run your tests
+        uses: Ubuntu/WSL/.github/actions/wsl-bash@main
+        with:
+            distro: ${{ env.distro }}
+            working-dir: "~/myrepo"
+            exec: python3 test.py WSL
+      - name: Clean up
+        # You may skip this step, but it is good practice to clean up after the tests
+        shell: powershell
+        env:
+          WSL_UTF8: "1" # The default UTF-16 encoding looks bad on GitHub
+        run: wsl --unregister ${{ env.distro }}
+  vm-stop:
+    name: Deallocate the Azure VM
+    runs-on: ubuntu-latest
+    needs: [vm-setup, tests]
+    if: always()
+    steps:
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_VM_CREDS }}
+      - name: Deallocate the Runner
+        shell: bash
+        run: |
+          az vm deallocate --name ${{ env.az_name }} --resource-group ${{ env.az_resource_group }}
