@@ -8,7 +8,7 @@ that Microsoft Store applications such as WSL cannot be run.
 ## How to run your CI on WSL
 1. Set up a Windows machine to run your CI in. GitHub runners won't do the job, but Azure VMs will.
 2. Set up an auto-logon in your Windows machine. See [here](https://learn.microsoft.com/en-us/troubleshoot/windows-server/user-profiles-and-logon/turn-on-automatic-logon) for a step-by-step guide.
-3. Add the GitHub runner as a startup application.
+3. Add the GitHub runner as a startup application (specifically, the `run.cmd` batch file in your actions runner).
 
 You're done! Your CI yaml files will need some extra work, however, as you need to allocate and deallocate the VM on demand.
 The runner needs to run on Windows and not directly on WSL, as WSL instances will shut themselves down automatically, so we implemented some utilities to
