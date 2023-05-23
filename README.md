@@ -19,5 +19,5 @@ You can find these actions [here](github.com/Ubuntu/WSL/.github/actions).
 ## What is this repo?
 This repository contains a very simple library `src.py` with a function that returns different results inside and outside WSL.
 To test it properly, we run a test on each platform:
-- Ubuntu in a GitHub Runner: ./.github/workflows/test.yaml
-- Ubuntu in WSL: ./.github/workflows/test_wsl.yaml
+- Ubuntu in a GitHub Runner: [test.yaml](./.github/workflows/test.yaml)
+- Ubuntu in WSL: [test_wsl.yaml](./.github/workflows/test_wsl.yaml)
