@@ -14,7 +14,7 @@ You're done! Your CI yaml files will need some extra work, however, as you need 
 The runner needs to run on Windows and not directly on WSL, as WSL instances will shut themselves down automatically, so we implemented some utilities to
 install and update WSL and the distro, as well as to run scripts.
 
-You can find these actions [here](github.com/Ubuntu/WSL/.github/actions).
+You can find these actions nd some more in-depth explanation for the setup [here](github.com/Ubuntu/WSL/.github/actions).
 
 ## What is this repo?
 This repository contains a very simple library `src.py` with a function that returns different results inside and outside WSL.
