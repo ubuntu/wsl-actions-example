@@ -1,0 +1,31 @@
+# Run the tests on a native Ubuntu machine
+name: Naïve testing on Ubuntu WSL
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+      - name: Install Ubuntu
+        shell: powershell
+        run: |
+          wsl --install --distribution Ubuntu --no-launch
+          ubuntu.exe install --root --ui=none
+      - name: Install Python
+        shell: powershell
+        run: |
+          wsl -d Ubuntu -- bash -ec @"
+          set -eu
+          DEBIAN_FRONTEND=noninteractive apt update
+          DEBIAN_FRONTEND=noninteractive apt install -y python3
+          "@
+      - name: Run tests
+        shell: bash
+        run: wsl -d Ubuntu -- bash -ec "python3 test.py WSL"
