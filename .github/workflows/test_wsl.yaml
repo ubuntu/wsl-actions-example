@@ -1,7 +1,7 @@
 # Run the tests on an Unbuntu distro running on WSL
-name: Test on Azure
+name: Test on WSL
 
-# Prevent multiple runs to interfere with each other
+# Prevent multiple runs from interfering with each other
 concurrency: azure-vm
 
 on:

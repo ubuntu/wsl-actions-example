@@ -1,5 +1,9 @@
 # Example usage of WSL Github actions
 
+[![Code quality](https://github.com/ubuntu/wsl-actions-example/actions/workflows/test.yaml/badge.svg)](https://github.com/ubuntu/wsl-actions-example/actions/workflows/test.yaml)
+[![Code quality](https://github.com/ubuntu/wsl-actions-example/actions/workflows/test_wsl.yaml/badge.svg)](https://github.com/ubuntu/wsl-actions-example/actions/workflows/test_wsl.yaml)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/ubuntu/gowsl/blob/main/LICENSE)
+
 Over at the [Ubuntu/WSL](https://github.com/ubuntu/WSL) repository, we developed some GitHub actions to
 make your life easier when running your CI in WSL. This is needed because GitHub runners do not support
 WSL. Just setting up an Azure VM will not cut it either, because the runner will run in session 0, which means
@@ -21,3 +25,4 @@ This repository contains a very simple library `src.py` with a function that ret
 To test it properly, we run a test on each platform:
 - Ubuntu in a GitHub Runner: [test.yaml](./.github/workflows/test.yaml)
 - Ubuntu in WSL: [test_wsl.yaml](./.github/workflows/test_wsl.yaml)
+
