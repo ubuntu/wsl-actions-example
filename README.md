@@ -11,8 +11,8 @@ that Microsoft Store applications such as WSL cannot be run.
 3. Add the GitHub runner as a startup application (specifically, the `run.cmd` batch file in your actions runner).
 
 You're done! Your CI yaml files will need some extra work, however, as you need to allocate and deallocate the VM on demand.
-The runner needs to run on Windows and not directly on WSL, as WSL instances will shut themselves down automatically, so we implemented some utilities to
-install and update WSL and the distro, as well as to run scripts.
+The runner needs to run on Windows and not directly on WSL, as WSL instances will shut themselves down automatically, so we
+implemented some utilities to install and update WSL and the distro, as well as to run scripts.
 
 You can find these actions and some more in-depth explanation for the setup [here](github.com/Ubuntu/WSL/.github/actions).
 
