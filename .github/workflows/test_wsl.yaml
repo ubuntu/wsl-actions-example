@@ -2,13 +2,15 @@
 name: Test on WSL
 
 # Prevent multiple runs from interfering with each other
-concurrency: azure-vm
+concurrency: azure-vm-wsl-ci-2
 
 on:
   pull_request:
   workflow_dispatch:
   push:
     branches: [main]
+    paths: 
+      - .github/workflows/test_wsl.yaml
 
 env:
   az_name: wsl-ci-2
@@ -31,7 +33,7 @@ jobs:
 
   tests:
     name: Run QA checks on the Azure VM
-    runs-on: self-hosted
+    runs-on: [self-hosted, wsl-ci-2]
     needs: vm-setup
     steps:
       - name: Set up WSL

@@ -1,6 +1,6 @@
 name: Cloud-init regression tests
 
-concurrency: azure-vm
+concurrency: azure-vm-cloud-init
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
       - .github/workflows/test_cloud_init.yaml
 
 env:
-  az_name: wsl-ci
+  az_name: wsl-ci-cloud-init
   az_resource_group: wsl
   WSL_UTF8: "1"
 
@@ -27,7 +27,7 @@ jobs:
         az vm start --name ${{ env.az_name }} --resource-group ${{ env.az_resource_group }}
   cloud-init:
     needs: vm-start
-    runs-on: self-hosted
+    runs-on: [self-hosted, cloud-init]
     env:
       rootfsPath:  ${env:USERPROFILE}\Downloads\rootfs\
       sourceDistro: Ubuntu-Preview
