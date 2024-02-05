@@ -1,0 +1,174 @@
+name: Cloud-init regression tests
+
+concurrency: azure-vm-cloud-init
+
+on:
+  workflow_dispatch:
+  pull_request:
+     paths:
+      - .github/workflows/test_cloud_init.yaml
+
+env:
+  az_name: wsl-ci-cloud-init
+  az_resource_group: wsl
+  WSL_UTF8: "1"
+
+jobs:
+  vm-start:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Log into azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_VM_CREDS }}
+    - name: Start the Runner
+      shell: bash
+      run: |
+        az vm start --name ${{ env.az_name }} --resource-group ${{ env.az_resource_group }}
+  cloud-init:
+    needs: vm-start
+    runs-on: [self-hosted, cloud-init]
+    env:
+      rootfsPath:  ${env:USERPROFILE}\Downloads\rootfs\
+      sourceDistro: Ubuntu-Preview
+      distroName: Regression_Ubuntu_Preview
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install or update WSL
+        uses: ubuntu/WSL/.github/actions/wsl-install@main
+      - name: Download latest rootFS
+        uses: ubuntu/WSL/.github/actions/download-rootfs@main
+        with:
+          distros: ${{ env.sourceDistro }}
+          path: ${{ env.rootfsPath }}
+      - name: Write some user-data
+        shell: powershell
+        env:
+            userdata: |
+              #cloud-config
+              locale: pt_BR
+              users:
+              - name: jdoe
+                gecos: John Doe
+                groups: [adm,dialout,cdrom,floppy,sudo,audio,dip,video,plugdev,netdev]
+                sudo: ALL=(ALL) NOPASSWD:ALL
+                shell: /bin/bash
+              write_files:
+              - path: /etc/wsl.conf
+                append: true
+                content: |
+                  [user]
+                  default=jdoe
+                packages: [hello]
+        run: |
+          $cloudinit = "${env:USERPROFILE}\.cloud-init\"
+          if (Test-Path -Path "${cloudinit}") {
+            Remove-Item -Recurse -Force -Path "${cloudinit}"
+          }
+          New-Item -Type Directory -Path "${cloudinit}"
+          
+          $path = "$cloudinit\${{ env.distroName }}.user-data"
+          [IO.File]::WriteAllText("${path}", "${env:userdata}")
+      - name: Import distro
+        shell: powershell
+        run: |
+          cd "${{ env.rootfsPath }}"
+          wsl --import "${{ env.distroName }}" "." ".\${{ env.sourceDistro }}.tar.gz"
+      - name: Setup distro for cloud-init daily build
+        uses: ubuntu/WSL/.github/actions/wsl-bash@main
+        with:
+          distro: ${{ env.distroName }}
+          exec: |
+            # Set up cloud-init
+            set -eu
+
+            # Enable the datasource
+            printf 'datasource_list: [WSL, None]\nnetwork:\n  config: disabled\n' > /etc/cloud/cloud.cfg.d/99_wsl.cfg
+
+            # Install dev-version of cloud-init
+            DEBIAN_FRONTEND=noninteractive
+            add-apt-repository -y ppa:cloud-init-dev/daily
+            apt update -y
+            apt install cloud-init -y
+
+            # Enable systemd
+            printf '\n[boot]\nsystemd=true\n' >> /etc/wsl.conf
+      - name: Run cloud-init
+        shell: powershell
+        run: |
+          # Run cloud-init
+
+          # Stop the distro to start systemd
+          wsl --terminate "${{ env.distroName }}"
+
+          # Start the distro and wait for cloud-init to finish
+          wsl -d "${{ env.distroName }}" -- cloud-init status --wait
+
+          Write-Output "::group::Cloud-init logs"
+          wsl -d "${{ env.distroName }}" -- cat /var/log/cloud-init-output.log
+          Write-Output "::endgroup::"
+
+          # Stop to apply remaining configuration
+          wsl --terminate "${{ env.distroName }}"
+      - name: Assertions
+        uses: ubuntu/WSL/.github/actions/wsl-bash@main
+        with:
+          distro: ${{ env.distroName }}
+          exec: |
+            # Test
+            set -eu
+
+            exitCode=0
+
+            function assert {
+              if [[ $1 == $2 ]]; then
+                return
+              fi
+              echo "ERROR"
+              echo "  Want:    $1"
+              echo "  Got:     $2" 
+              echo "  Message: $3"
+              echo "----------------"
+              touch ".testfailed"
+            }
+
+            wantUser="jdoe"
+            gotUser=$(whoami)
+            assert "$wantUser" "$gotUser" "Username was not set properly"
+
+            wantGecos="jdoe:x:1000:1000:John Doe,,,:/home/jdoe:/bin/bash"
+            gotGecos=$(getent passwd $wantUser) || true
+            assert "$wantGecos" "$gotGecos" "GECOS was not set properly"
+
+            wantHello="installed"
+            gotHello=$(dpkg -s "hello" &> /dev/null && echo "installed" || echo "not installed")
+            assert "$wantHello" "$gotHello" "Hello was not installed"
+
+            if [ -f ".testfailed" ]; then
+              echo "Failure"
+              exit 1
+            fi
+
+            echo "Success"
+            exit 0
+      - name: Cleanup
+        if: always()
+        shell: powershell
+        run: |
+          wsl --shutdown
+          wsl --unregister ${{ env.distroName }}
+          Remove-Item -Recurse -Force -Path "${env:UserProfile}/.cloud-init"
+          Exit(0)
+  stop-vm:
+    runs-on: ubuntu-latest
+    needs: [vm-start, cloud-init]
+    if: always()
+    steps:
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_VM_CREDS }}
+      - name: Deallocate the Runner
+        shell: bash
+        run: |
+          az vm deallocate --name ${{ env.az_name }} --resource-group ${{ env.az_resource_group }}
